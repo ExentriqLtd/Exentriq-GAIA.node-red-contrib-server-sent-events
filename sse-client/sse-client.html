@@ -5,10 +5,11 @@
     color: '#4693c8',
     defaults: {
       name: { value: "" },
-      url: { value: "", required: true },
       event: { value: "", required: true },
+      output: { value: "", required: true },
       headers: { value: "" },
     },
+    inputs: 1,
     outputs: 1,
     icon: 'white-globe.svg',
     label: function () {
@@ -19,6 +20,17 @@
         type: "json",
         types: ["json"]
       })
+      $("#node-input-output").typedInput({
+          types: [
+              {
+                  value: "output",
+                  options: [
+                      { value: "json", label: "Json"},
+                      { value: "text", label: "Text"},
+                  ]
+              }
+          ]
+      })
     },
   });
 </script>
@@ -28,13 +40,13 @@
 		<label for="node-input-name"><i class="fa fa-tags"></i> Name </label>
 		<input type="text" id="node-input-name" />
 	</div>
-	<div class="form-row">
-		<label for="node-input-url"><i class="fa fa-podcast"></i> URL </label>
-		<input type="text" id="node-input-url" />
-	</div>
   <div class="form-row">
 		<label for="node-input-event"><i class="fa fa-wifi"></i> Event </label>
 		<input type="text" id="node-input-event" />
+	</div>
+  <div class="form-row">
+		<label for="node-input-output"><i class="fa fa-comments"></i> Output </label>
+		<input type="text" id="node-input-output" />
 	</div>
   <div class="form-row">
 		<label for="node-input-headers"><i class="fa fa-list"></i> Headers </label>

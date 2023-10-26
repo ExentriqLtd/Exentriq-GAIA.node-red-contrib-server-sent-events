@@ -7,7 +7,7 @@ function updateNodeStatus(node, type) {
   node.status({
     fill: type === "success" ? 'green' : 'red',
     shape: 'dot',
-    text: `${node.subscribers.length} client(s) connected`,
+    text: `${node.subscribers.length} client(s) connected!`,
   });
 }
 

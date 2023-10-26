@@ -1,6 +1,6 @@
 {
   "name": "@tq-bit/node-red-contrib-server-sent-events",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Nodes to create - or subscribe to - server-sent events",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tq-bit/node-red-contrib-server-sent-events"
+    "url": "git+https://github.com/ExentriqLtd/Exentriq-GAIA.node-red-contrib-server-sent-events"
   },
   "keywords": [
     "node-red",

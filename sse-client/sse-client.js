@@ -1,6 +1,12 @@
 const EventSource = require("eventsource")
 
-
+function updateStatus(node){
+  node.status({
+    fill: 'green',
+    shape: 'dot',
+    text: 'active clients: ' + Object.keys(node.eventSources).length
+  });
+}
 
 /**
  * Handles an event by logging it and sending a message to the node with a generated ID, topic, and payload.
@@ -10,12 +16,20 @@ const EventSource = require("eventsource")
  * @param {Object} event - the event object received
  * @return {void}
  */
-function handleEvent(RED, node, event) {
+function handleEvent(RED, node, event, eventSource, uuid) {
   RED.log.debug(`Received event: from ${this.url} - ${event.type}`);
+
+  var data;
+  try {
+    data = node.output == 'json' ? JSON.parse(event.data) : event.data;
+  } catch (error) {
+    data = event.data;
+  }
+
   node.send({
     _msid: RED.util.generateId(),
     topic: event.type,
-    payload: event.data
+    payload: {uuid, data, event: 'message'}
   });
 }
 
@@ -27,19 +41,18 @@ function handleEvent(RED, node, event) {
  * @param {Error} err - the error that occurred
  * @return {void}
  */
-function handleEventSourceError(RED, node, err) {
-  const errorMessage = err.message ? err.message : err;
-  RED.log.error(errorMessage);
+function handleEventSourceError(RED, node, err, eventSource, uuid) {
+  
+  eventSource.close();
+  delete node.eventSources[uuid];
+
+  updateStatus(node);
+
   node.send({
     _msid: RED.util.generateId(),
-    error: errorMessage
+    payload: {uuid, event: 'close'}
   });
-  node.status({
-    fill: 'red',
-    shape: 'dot',
-    text: `${errorMessage}`,
-  });
-  node.error(errorMessage);
+  
 }
 
 /**
@@ -65,25 +78,48 @@ module.exports = function (RED) {
     try {
       RED.nodes.createNode(this, config);
 
-      this.url = config.url
       this.event = config.event;
+      this.output = config.output;
       this.headers = config.headers ? JSON.parse(config.headers) : {};
-      this.eventSource = new EventSource(this.url, { withCredentials: true, headers: this.headers });
+      this.eventSources = {};
 
-      this.status({
-        fill: 'green',
-        shape: 'dot',
-        text: `Connected to ${this.url}`,
+      const node = this;
+
+      this.on('input', (msg, send, done) => {
+        try {
+          const url = msg.payload.url;
+          const uuid = msg.payload.uuid;
+
+          if(node.eventSources[uuid]){
+            node.error("Duplicate uuid refused: " + uuid);
+            return;
+          }
+
+          const headers = msg.payload.headers || node.headers;
+          const eventSource = new EventSource(url, { withCredentials: true, headers: headers });
+
+          // Register default message event
+          eventSource.on(this.event, (event) => handleEvent(RED, node, event, eventSource, uuid))
+
+          // Register error event
+          eventSource.on('error', (err) => handleEventSourceError(RED, node, err, eventSource, uuid));
+
+          node.eventSources[uuid]= eventSource;
+
+          updateStatus(node);
+
+        } catch (error) {
+          RED.log.error(error)
+          updateNodeStatus(this, 'error');
+        } finally {
+          if (done && typeof done === 'function') done()
+        }
       });
 
-      // Register default message event
-      this.eventSource.on(this.event, (event) => handleEvent(RED, this, event))
+      updateStatus(node);
 
-      // Register error event
-      this.eventSource.on('error', (err) => handleEventSourceError(RED, this, err));
-
-      // Register close event of the node runtime to clean up old event sources
-      this.on('close', () => handleEventSourceClose(RED, this));
+      // // Register close event of the node runtime to clean up old event sources
+      // this.on('close', () => handleEventSourceClose(RED, this));
     } catch (error) {
       this.status({
         fill: 'red',
